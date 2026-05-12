@@ -62,9 +62,10 @@ def test_generate_briefing_outputs_required_structure():
     }]
     article = generate_briefing(news, date="2026-05-09", issue_no=1)
     assert article["content_type"] == "briefing"
-    assert article["title"] == "AI简报001｜2026年5月10日：OpenAI 新工具显著降低内容创作门槛"
+    assert article["title"] == "AI简报001｜5月10日：OpenAI 新工具显著降低内容创作门槛"
     assert article["date"] == "2026-05-10"
-    assert "日期：2026年5月10日" in article["content_markdown"]
+    assert "日期：5月10日" in article["content_markdown"]
+    assert "2026年5月10日" not in article["content_markdown"]
     assert "今日AI信号源" not in article["title"]
     assert "## 今日AI信号源" not in article["content_markdown"]
     assert "来源：" not in article["content_markdown"]

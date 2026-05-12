@@ -4,9 +4,11 @@ from datetime import datetime, timedelta
 from typing import Any
 
 
-def _cn_date(date: str) -> str:
+def _cn_date(date: str, *, include_year: bool = False) -> str:
     dt = datetime.strptime(date, "%Y-%m-%d")
-    return f"{dt.year}年{dt.month}月{dt.day}日"
+    if include_year:
+        return f"{dt.year}年{dt.month}月{dt.day}日"
+    return f"{dt.month}月{dt.day}日"
 
 
 def display_date_for_news_date(date: str) -> str:
