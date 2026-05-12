@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+data/*.db
+data/token_store.json
+data/token_store_*.json
+outputs/articles/*
+outputs/covers/*
+outputs/images/*
+logs/*

@@ -1,0 +1,5 @@
+# 每天凌晨 1 点生成 AI 简报/解读草稿（只创建草稿，不发布/群发）
+# 安装方式：在 NAS 上执行 `crontab -e`，加入下面这一行。
+# 日志：/home/superfa/superfa-ai-agent/logs/daily-YYYY-MM-DD.log
+
+0 1 * * * /home/superfa/superfa-ai-agent/scripts/run_daily.sh
