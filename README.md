@@ -17,7 +17,7 @@
 
 当前项目已经具备内容生产引擎能力，适合进一步封装成 Web 管理后台。建议先采用 **FastAPI + Jinja2/HTMX** 做内部后台，再视需要升级到 FastAPI + Next.js。
 
-详见：[`docs/web-roadmap.md`](docs/web-roadmap.md)。
+第一版独立 Web MVP 已放在 `app/web`，不替换原 CLI 流程。启动与使用说明见：[`docs/web-mvp.md`](docs/web-mvp.md)。完整路线图见：[`docs/web-roadmap.md`](docs/web-roadmap.md)。
 
 ## 快速开始
 

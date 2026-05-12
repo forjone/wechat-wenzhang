@@ -1,0 +1,98 @@
+from __future__ import annotations
+
+import sqlite3
+
+from fastapi.testclient import TestClient
+
+from app.config import Settings
+from app.database import init_db, save_article, save_source
+from app.web.main import create_app
+
+
+def make_client(tmp_path, monkeypatch):
+    db_path = tmp_path / "web.db"
+    settings = Settings(database_url=f"sqlite:///{db_path}")
+    monkeypatch.setattr("app.web.main.load_dotenv", lambda: None)
+    monkeypatch.setattr("app.web.main.Settings.from_env", lambda: settings)
+    return TestClient(create_app()), db_path
+
+
+def test_web_dashboard_renders_without_touching_cli(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    save_source(db_path, {"date": "2026-05-09", "title": "新闻 A", "url": "https://example.com/a", "source": "AIHot", "summary": "摘要"})
+    save_article(db_path, {"content_type": "briefing", "issue_no": 1, "date": "2026-05-10", "title": "简报 A", "digest": "摘要", "content_markdown": "# 简报", "content_html": "<h1>简报</h1>", "status": "generated"})
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "超级发 AI 内容工作台" in response.text
+    assert "新闻源" in response.text
+    assert "文章" in response.text
+
+
+def test_news_page_collects_and_lists_sources(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+
+    def fake_prepare_news(settings, target_date, allow_fallback=None):
+        return [
+            {"date": target_date, "title": "AI 新闻一", "url": "https://example.com/1", "source": "AIHot", "summary": "摘要一", "category": "产品", "tags": ["AI"], "score": 88, "source_provider": "aihot_skill"},
+            {"date": target_date, "title": "AI 新闻二", "url": "https://example.com/2", "source": "AIHot", "summary": "摘要二", "category": "行业", "tags": ["Agent"], "score": 77, "source_provider": "aihot_skill"},
+        ]
+
+    monkeypatch.setattr("app.web.services.prepare_news", fake_prepare_news)
+
+    response = client.post("/news/collect", data={"date": "2026-05-09"}, follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/news?date=2026-05-09"
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("select count(*) from sources").fetchone()[0] == 2
+
+    page = client.get("/news?date=2026-05-09")
+    assert page.status_code == 200
+    assert "AI 新闻一" in page.text
+    assert "生成文章" in page.text
+
+
+def test_generate_source_article_stores_article_with_selected_style_and_account(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    source_id = save_source(db_path, {"date": "2026-05-09", "title": "可生成新闻", "url": "https://example.com/src", "source": "AIHot", "summary": "摘要", "content": "正文"})
+
+    def fake_create_draft(settings, article, create_draft, wechat_account="default", **kwargs):
+        assert create_draft is True
+        assert wechat_account == "mflai"
+        return "local_draft_web"
+
+    monkeypatch.setattr("app.web.services.create_draft_if_requested", fake_create_draft)
+
+    response = client.post(
+        f"/news/{source_id}/generate",
+        data={"content_type": "interpretation", "theme": "fresh-card", "wechat_account": "mflai", "create_draft": "on"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    article_id = response.headers["location"].removeprefix("/articles/")
+    assert article_id.isdigit()
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("select * from articles where id = ?", (int(article_id),)).fetchone()
+        assert row["title"]
+        assert row["status"] == "draft_created"
+        assert row["draft_id"] == "local_draft_web"
+
+
+def test_article_detail_shows_markdown_and_html_preview(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    article_id = save_article(db_path, {"content_type": "briefing", "issue_no": 1, "date": "2026-05-10", "title": "详情文章", "digest": "摘要", "content_markdown": "# Markdown", "content_html": "<h1>HTML</h1>", "status": "generated"})
+
+    response = client.get(f"/articles/{article_id}")
+
+    assert response.status_code == 200
+    assert "详情文章" in response.text
+    assert "# Markdown" in response.text
+    assert "HTML 预览" in response.text
+    assert "&lt;h1&gt;HTML&lt;/h1&gt;" not in response.text

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>生成文章</h2>
+  <p><strong>{{ source.title }}</strong></p>
+  <p class="muted">{{ source.summary }}</p>
+  <form method="post" action="/news/{{ source.id }}/generate">
+    <p>
+      <label>内容类型</label>
+      <select name="content_type">
+        <option value="interpretation">AI解读</option>
+        <option value="briefing">AI简报</option>
+      </select>
+    </p>
+    <p>
+      <label>排版主题</label>
+      <select name="theme">
+        <option value="fresh-card">fresh-card</option>
+        <option value="bytedance-green">bytedance-green</option>
+      </select>
+    </p>
+    <p>
+      <label>公众号账号</label>
+      <input name="wechat_account" value="cjfai">
+    </p>
+    <p><label><input type="checkbox" name="create_draft"> 创建公众号草稿</label></p>
+    <button type="submit">生成文章</button>
+  </form>
+</section>
+{% endblock %}
