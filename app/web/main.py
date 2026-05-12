@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import replace
+import os
+
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -9,9 +12,18 @@ from app.database import get_article
 from app.web import services
 
 
+WEB_DEFAULT_DATABASE_URL = "sqlite:///data/web/superfa-web.db"
+
+
+def web_settings_from_env() -> Settings:
+    settings = Settings.from_env()
+    web_database_url = os.getenv("WEB_DATABASE_URL", WEB_DEFAULT_DATABASE_URL)
+    return replace(settings, database_url=web_database_url)
+
+
 def create_app() -> FastAPI:
     load_dotenv()
-    settings = Settings.from_env()
+    settings = web_settings_from_env()
     templates = Jinja2Templates(directory="app/web/templates")
     app = FastAPI(title="超级发 AI 内容工作台")
     app.state.settings = settings

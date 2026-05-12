@@ -16,8 +16,8 @@
 
 - Web 代码全部放在 `app/web/`。
 - 原命令行入口仍是 `python3 -m app.main ...`。
-- 数据库仍复用现有 `data/superfa.db`、`articles`、`sources`、`settings` 表。
-- Web 启动时只调用现有 `init_db()` 做兼容初始化，不会删除或重建数据。
+- Web 默认使用独立调试数据库 `data/web/superfa-web.db`，不复用 CLI/定时任务的 `data/superfa.db`。
+- 如需改 Web 数据库，只设置 `WEB_DATABASE_URL=sqlite:////path/to/web.db`；不要为了 Web 调试改 `DATABASE_URL`。
 - 默认不会自动发布/群发；只有表单勾选“创建公众号草稿”时才调用已有草稿创建逻辑。
 - 页面只展示公众号账号别名，不展示 `appid`、`appsecret`、proxy key、token 等密钥。
 
@@ -40,6 +40,7 @@ python3 -m pip install fastapi 'uvicorn[standard]' jinja2 python-multipart
 
 ```bash
 cd /home/superfa/superfa-ai-agent
+# 可选：WEB_DATABASE_URL=sqlite:///data/web/superfa-web.db
 python3 -m uvicorn app.web.main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -54,6 +55,8 @@ http://<服务器IP>:8000/
 ```bash
 python3 -m uvicorn app.web.main:app --host 127.0.0.1 --port 8000
 ```
+
+Web 运行时会自动初始化 `WEB_DATABASE_URL` 指向的库。这个库只用于 Web 调试和后台操作，不会读取或写入 `data/superfa.db`，除非你显式把 `WEB_DATABASE_URL` 改成那个路径。
 
 ## 典型使用流程
 

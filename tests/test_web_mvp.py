@@ -6,15 +6,36 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.database import init_db, save_article, save_source
-from app.web.main import create_app
+from app.web.main import create_app, web_settings_from_env
 
 
 def make_client(tmp_path, monkeypatch):
     db_path = tmp_path / "web.db"
     settings = Settings(database_url=f"sqlite:///{db_path}")
+    monkeypatch.setenv("WEB_DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setattr("app.web.main.load_dotenv", lambda: None)
     monkeypatch.setattr("app.web.main.Settings.from_env", lambda: settings)
     return TestClient(create_app()), db_path
+
+
+def test_web_default_database_is_isolated_from_cli_data(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("WEB_DATABASE_URL", raising=False)
+
+    settings = web_settings_from_env()
+
+    assert settings.database_url == "sqlite:///data/web/superfa-web.db"
+
+
+def test_web_database_url_can_be_overridden_separately(monkeypatch, tmp_path):
+    cli_db = tmp_path / "cli.db"
+    web_db = tmp_path / "web-isolated.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{cli_db}")
+    monkeypatch.setenv("WEB_DATABASE_URL", f"sqlite:///{web_db}")
+
+    settings = web_settings_from_env()
+
+    assert settings.database_url == f"sqlite:///{web_db}"
 
 
 def test_web_dashboard_renders_without_touching_cli(tmp_path, monkeypatch):
