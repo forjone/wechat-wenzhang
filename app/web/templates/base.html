@@ -17,7 +17,15 @@
     th, td { border-bottom: 1px solid #edf2ef; padding: 10px; text-align: left; vertical-align: top; }
     th { color: #52635b; font-size: 13px; }
     input, select, button { padding: 9px 10px; border: 1px solid #cad7d0; border-radius: 8px; }
-    button, .button { background: #52b788; color: white; border: none; text-decoration: none; padding: 9px 12px; border-radius: 8px; display: inline-block; }
+    button, .button { background: #52b788; color: white; border: none; text-decoration: none; padding: 9px 12px; border-radius: 8px; display: inline-block; cursor: pointer; }
+    button:disabled { opacity: .72; cursor: wait; }
+    .danger { background: #dc2626; }
+    .table-toolbar { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 12px; }
+    .loading-message { display: none; margin-left: 10px; color: #2d6a4f; font-size: 13px; }
+    .js-loading-form.is-loading .loading-message { display: inline-block; }
+    .spinner { display: none; width: 13px; height: 13px; margin-right: 7px; border: 2px solid rgba(255,255,255,.45); border-top-color: #fff; border-radius: 999px; vertical-align: -2px; animation: spin .8s linear infinite; }
+    .js-loading-form.is-loading .spinner { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     pre { white-space: pre-wrap; background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: 10px; overflow-x: auto; }
     .html-preview { border: 1px solid #d8e5dd; border-radius: 10px; padding: 16px; background: #fff; }
     .muted { color: #6b7b73; font-size: 13px; }
@@ -33,5 +41,37 @@
     </nav>
   </header>
   <main>{% block content %}{% endblock %}</main>
+  <script>
+    document.querySelectorAll('.js-loading-form').forEach((form) => {
+      form.addEventListener('submit', () => {
+        const button = form.querySelector('button[type="submit"]');
+        if (!button) return;
+        form.classList.add('is-loading');
+        button.disabled = true;
+        const label = button.querySelector('.button-label');
+        const loadingText = button.dataset.loadingText || '处理中...';
+        if (label) label.textContent = loadingText;
+      });
+    });
+    document.querySelectorAll('.js-select-all').forEach((checkbox) => {
+      checkbox.addEventListener('change', () => {
+        const form = checkbox.closest('form');
+        if (!form) return;
+        form.querySelectorAll('input[name="ids"]').forEach((item) => { item.checked = checkbox.checked; });
+      });
+    });
+    document.querySelectorAll('.bulk-form').forEach((form) => {
+      form.addEventListener('submit', (event) => {
+        const selected = form.querySelectorAll('input[name="ids"]:checked').length;
+        if (!selected) {
+          event.preventDefault();
+          alert('请先选择要删除的记录');
+          return;
+        }
+        const message = form.dataset.confirm || '确认删除选中记录？';
+        if (!confirm(message)) event.preventDefault();
+      });
+    });
+  </script>
 </body>
 </html>

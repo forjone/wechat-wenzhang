@@ -143,3 +143,60 @@ def test_article_detail_shows_markdown_and_html_preview(tmp_path, monkeypatch):
     assert "# Markdown" in response.text
     assert "HTML 预览" in response.text
     assert "&lt;h1&gt;HTML&lt;/h1&gt;" not in response.text
+
+
+def test_news_collect_button_has_loading_state(tmp_path, monkeypatch):
+    client, _ = make_client(tmp_path, monkeypatch)
+
+    response = client.get("/news?date=2026-05-09")
+
+    assert response.status_code == 200
+    assert "data-loading-text=\"采集中...\"" in response.text
+    assert "spinner" in response.text
+    assert "正在采集，请稍候" in response.text
+
+
+def test_bulk_delete_sources_deletes_only_selected_rows(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    first_id = save_source(db_path, {"date": "2026-05-09", "title": "删除新闻", "url": "https://example.com/delete", "source": "AIHot", "summary": "删"})
+    keep_id = save_source(db_path, {"date": "2026-05-09", "title": "保留新闻", "url": "https://example.com/keep", "source": "AIHot", "summary": "留"})
+
+    response = client.post("/news/bulk-delete", data={"ids": [str(first_id)], "date": "2026-05-09"}, follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/news?date=2026-05-09"
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("select count(*) from sources where id = ?", (first_id,)).fetchone()[0] == 0
+        assert conn.execute("select count(*) from sources where id = ?", (keep_id,)).fetchone()[0] == 1
+
+
+def test_bulk_delete_articles_deletes_only_selected_rows(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    delete_id = save_article(db_path, {"content_type": "briefing", "issue_no": 1, "date": "2026-05-10", "title": "删除文章", "digest": "摘要", "content_markdown": "# 删", "content_html": "<h1>删</h1>", "status": "generated"})
+    keep_id = save_article(db_path, {"content_type": "briefing", "issue_no": 2, "date": "2026-05-10", "title": "保留文章", "digest": "摘要", "content_markdown": "# 留", "content_html": "<h1>留</h1>", "status": "generated"})
+
+    response = client.post("/articles/bulk-delete", data={"ids": [str(delete_id)]}, follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/articles"
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("select count(*) from articles where id = ?", (delete_id,)).fetchone()[0] == 0
+        assert conn.execute("select count(*) from articles where id = ?", (keep_id,)).fetchone()[0] == 1
+
+
+def test_list_pages_render_bulk_delete_controls(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    save_source(db_path, {"date": "2026-05-09", "title": "可勾选新闻", "url": "https://example.com/src", "source": "AIHot", "summary": "摘要"})
+    save_article(db_path, {"content_type": "briefing", "issue_no": 1, "date": "2026-05-10", "title": "可勾选文章", "digest": "摘要", "content_markdown": "# 文", "content_html": "<h1>文</h1>", "status": "generated"})
+
+    news_page = client.get("/news?date=2026-05-09")
+    articles_page = client.get("/articles")
+
+    assert 'action="/news/bulk-delete"' in news_page.text
+    assert 'name="ids"' in news_page.text
+    assert "批量删除" in news_page.text
+    assert 'action="/articles/bulk-delete"' in articles_page.text
+    assert 'name="ids"' in articles_page.text

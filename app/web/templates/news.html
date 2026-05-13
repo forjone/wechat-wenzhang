@@ -2,23 +2,31 @@
 {% block content %}
 <section class="card">
   <h2>新闻源</h2>
-  <form method="post" action="/news/collect">
+  <form method="post" action="/news/collect" class="js-loading-form">
     <input type="date" name="date" value="{{ date }}" required>
-    <button type="submit">采集这天新闻</button>
+    <button type="submit" data-loading-text="采集中..."><span class="spinner" aria-hidden="true"></span><span class="button-label">采集这天新闻</span></button>
+    <span class="loading-message" role="status" aria-live="polite">正在采集，请稍候</span>
   </form>
 </section>
 <section class="card">
-  <table>
-    <tr><th>标题</th><th>来源</th><th>摘要</th><th>分数</th><th>操作</th></tr>
-    {% for source in sources %}
-    <tr>
-      <td><a href="{{ source.url }}" target="_blank">{{ source.title }}</a></td>
-      <td>{{ source.source }}</td>
-      <td>{{ source.summary }}</td>
-      <td>{{ source.score }}</td>
-      <td><a class="button" href="/news/{{ source.id }}/generate">生成文章</a></td>
-    </tr>
-    {% endfor %}
-  </table>
+  <form method="post" action="/news/bulk-delete" class="bulk-form" data-confirm="确认删除选中的新闻源？">
+    <input type="hidden" name="date" value="{{ date }}">
+    <div class="table-toolbar">
+      <button type="submit" class="danger">批量删除</button>
+    </div>
+    <table>
+      <tr><th><input type="checkbox" class="js-select-all" aria-label="全选新闻源"></th><th>标题</th><th>来源</th><th>摘要</th><th>分数</th><th>操作</th></tr>
+      {% for source in sources %}
+      <tr>
+        <td><input type="checkbox" name="ids" value="{{ source.id }}" aria-label="选择 {{ source.title }}"></td>
+        <td><a href="{{ source.url }}" target="_blank">{{ source.title }}</a></td>
+        <td>{{ source.source }}</td>
+        <td>{{ source.summary }}</td>
+        <td>{{ source.score }}</td>
+        <td><a class="button" href="/news/{{ source.id }}/generate">生成文章</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </form>
 </section>
 {% endblock %}

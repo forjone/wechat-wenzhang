@@ -2,18 +2,24 @@
 {% block content %}
 <section class="card">
   <h2>文章</h2>
-  <table>
-    <tr><th>ID</th><th>标题</th><th>类型</th><th>日期</th><th>状态</th><th>草稿</th></tr>
-    {% for article in articles %}
-    <tr>
-      <td>{{ article.id }}</td>
-      <td><a href="/articles/{{ article.id }}">{{ article.title }}</a></td>
-      <td>{{ article.content_type }}</td>
-      <td>{{ article.date }}</td>
-      <td>{{ article.status }}</td>
-      <td>{{ "已创建" if article.draft_id else "-" }}</td>
-    </tr>
-    {% endfor %}
-  </table>
+  <form method="post" action="/articles/bulk-delete" class="bulk-form" data-confirm="确认删除选中的文章？">
+    <div class="table-toolbar">
+      <button type="submit" class="danger">批量删除</button>
+    </div>
+    <table>
+      <tr><th><input type="checkbox" class="js-select-all" aria-label="全选文章"></th><th>ID</th><th>标题</th><th>类型</th><th>日期</th><th>状态</th><th>草稿</th></tr>
+      {% for article in articles %}
+      <tr>
+        <td><input type="checkbox" name="ids" value="{{ article.id }}" aria-label="选择 {{ article.title }}"></td>
+        <td>{{ article.id }}</td>
+        <td><a href="/articles/{{ article.id }}">{{ article.title }}</a></td>
+        <td>{{ article.content_type }}</td>
+        <td>{{ article.date }}</td>
+        <td>{{ article.status }}</td>
+        <td>{{ "已创建" if article.draft_id else "-" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </form>
 </section>
 {% endblock %}

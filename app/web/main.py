@@ -4,6 +4,7 @@ from dataclasses import replace
 import os
 
 from fastapi import FastAPI, Form, HTTPException, Request
+from typing import Annotated
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -55,6 +56,12 @@ def create_app() -> FastAPI:
         services.collect_sources_for_date(settings, date)
         return RedirectResponse(f"/news?date={date}", status_code=303)
 
+    @app.post("/news/bulk-delete")
+    def bulk_delete_news(ids: Annotated[list[int] | None, Form()] = None, date: str = Form("")):
+        services.bulk_delete_sources(settings.database_path, ids or [])
+        location = f"/news?date={date}" if date else "/news"
+        return RedirectResponse(location, status_code=303)
+
     @app.get("/news/{source_id}/generate", response_class=HTMLResponse)
     def generate_form(request: Request, source_id: int):
         source = services.get_source(settings.database_path, source_id)
@@ -84,6 +91,11 @@ def create_app() -> FastAPI:
     def articles(request: Request):
         rows = services.list_articles(settings.database_path)
         return render(request, "articles.html", {"articles": rows})
+
+    @app.post("/articles/bulk-delete")
+    def bulk_delete_articles(ids: Annotated[list[int] | None, Form()] = None):
+        services.bulk_delete_articles(settings.database_path, ids or [])
+        return RedirectResponse("/articles", status_code=303)
 
     @app.get("/articles/{article_id}", response_class=HTMLResponse)
     def article_detail(request: Request, article_id: int):

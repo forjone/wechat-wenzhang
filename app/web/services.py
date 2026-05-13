@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from app.agents.briefing_writer import generate_briefing
 from app.agents.interpretation_writer import generate_interpretation
@@ -42,6 +42,28 @@ def list_articles(db_path: str | Path) -> list[dict[str, Any]]:
     ensure_web_db(db_path)
     with get_connection(db_path) as conn:
         return [dict(row) for row in conn.execute("SELECT * FROM articles ORDER BY id DESC LIMIT 100").fetchall()]
+
+
+def bulk_delete_sources(db_path: str | Path, ids: Sequence[int]) -> int:
+    ensure_web_db(db_path)
+    clean_ids = [int(item_id) for item_id in ids if int(item_id) > 0]
+    if not clean_ids:
+        return 0
+    placeholders = ",".join("?" for _ in clean_ids)
+    with get_connection(db_path) as conn:
+        cursor = conn.execute(f"DELETE FROM sources WHERE id IN ({placeholders})", tuple(clean_ids))
+        return int(cursor.rowcount or 0)
+
+
+def bulk_delete_articles(db_path: str | Path, ids: Sequence[int]) -> int:
+    ensure_web_db(db_path)
+    clean_ids = [int(item_id) for item_id in ids if int(item_id) > 0]
+    if not clean_ids:
+        return 0
+    placeholders = ",".join("?" for _ in clean_ids)
+    with get_connection(db_path) as conn:
+        cursor = conn.execute(f"DELETE FROM articles WHERE id IN ({placeholders})", tuple(clean_ids))
+        return int(cursor.rowcount or 0)
 
 
 def dashboard_counts(db_path: str | Path) -> dict[str, int]:
