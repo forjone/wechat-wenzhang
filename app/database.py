@@ -96,7 +96,7 @@ def save_source(db_path: str | Path, item: dict[str, Any]) -> int:
                 item.get("summary"), item.get("content"), item.get("category"),
                 json.dumps(item.get("tags", []), ensure_ascii=False), item.get("score", 0),
                 item.get("selected", 0), item.get("source_provider", "aihot_skill"),
-                json.dumps(item.get("raw", item.get("raw_json", {})), ensure_ascii=False), now,
+                json.dumps(item.get("raw", item.get("raw_json", {})) or {"published_at": item.get("published_at")}, ensure_ascii=False), now,
             ),
         )
         return int(cursor.lastrowid)

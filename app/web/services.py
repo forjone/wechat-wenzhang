@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 from typing import Any, Sequence
@@ -26,6 +27,24 @@ def ensure_web_db(db_path: str | Path) -> None:
     init_db(db_path)
 
 
+def source_published_time(source: dict[str, Any]) -> str:
+    raw = source.get("raw_json") or ""
+    if isinstance(raw, str) and raw.strip():
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            payload = {}
+    elif isinstance(raw, dict):
+        payload = raw
+    else:
+        payload = {}
+    for key in ("publishedAt", "published_at", "date", "time"):
+        value = payload.get(key)
+        if value:
+            return str(value)
+    return str(source.get("published_at") or source.get("date") or "")
+
+
 def list_sources(db_path: str | Path, date: str | None = None) -> list[dict[str, Any]]:
     ensure_web_db(db_path)
     sql = "SELECT * FROM sources"
@@ -35,7 +54,10 @@ def list_sources(db_path: str | Path, date: str | None = None) -> list[dict[str,
         params = (date,)
     sql += " ORDER BY id DESC LIMIT 100"
     with get_connection(db_path) as conn:
-        return [dict(row) for row in conn.execute(sql, params).fetchall()]
+        rows = [dict(row) for row in conn.execute(sql, params).fetchall()]
+    for row in rows:
+        row["published_time"] = source_published_time(row)
+    return rows
 
 
 def list_articles(db_path: str | Path) -> list[dict[str, Any]]:
