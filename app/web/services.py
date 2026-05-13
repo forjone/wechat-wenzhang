@@ -18,6 +18,7 @@ from app.database import (
     update_article_draft,
 )
 from app.main import create_draft_if_requested, prepare_news
+from app.outputs import save_article_outputs
 from app.render.markdown_to_html import markdown_to_wechat_html
 
 
@@ -102,11 +103,13 @@ def generate_article_from_source(
     else:
         raise ValueError("UNSUPPORTED_CONTENT_TYPE")
 
-    article.update(generate_article_images(article))
+    article.update(generate_article_images(article, output_dir=settings.image_output_dir))
     article["content_html"] = markdown_to_wechat_html(article["content_markdown"], content_type=article["content_type"], theme=theme)
     article["topic"] = source.get("title")
     article["source_title"] = source.get("title")
     article["source_url"] = source.get("url")
+    output_paths = save_article_outputs(article, output_dir=settings.article_output_dir)
+    article["files"] = {key: str(path) for key, path in output_paths.items()}
     article_id = save_article(settings.database_path, article)
     draft_id = create_draft_if_requested(settings, article, create_draft, wechat_account, retry_delay_seconds=0)
     if draft_id:

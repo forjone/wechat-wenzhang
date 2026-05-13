@@ -105,6 +105,32 @@ def test_generate_source_article_stores_article_with_selected_style_and_account(
         assert row["draft_id"] == "local_draft_web"
 
 
+def test_web_generated_article_outputs_are_isolated_from_cli_outputs(tmp_path, monkeypatch):
+    web_output_dir = tmp_path / "web-outputs" / "articles"
+    cli_output_dir = tmp_path / "cli-outputs" / "articles"
+    monkeypatch.setenv("WEB_OUTPUT_DIR", str(web_output_dir))
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    source_id = save_source(db_path, {"date": "2026-05-09", "title": "隔离输出新闻", "url": "https://example.com/src", "source": "AIHot", "summary": "摘要", "content": "正文"})
+    cli_output_dir.mkdir(parents=True)
+    monkeypatch.setattr("app.web.services.create_draft_if_requested", lambda *args, **kwargs: "")
+
+    response = client.post(
+        f"/news/{source_id}/generate",
+        data={"content_type": "briefing", "theme": "bytedance-green", "wechat_account": "cjfai"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert list(web_output_dir.glob("briefing-*.md"))
+    assert not list(cli_output_dir.glob("*.md"))
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("select cover_path from articles order by id desc limit 1").fetchone()
+    assert row["cover_path"]
+    assert "data/web/outputs/images" in row["cover_path"]
+
+
 def test_article_detail_shows_markdown_and_html_preview(tmp_path, monkeypatch):
     client, db_path = make_client(tmp_path, monkeypatch)
     init_db(db_path)

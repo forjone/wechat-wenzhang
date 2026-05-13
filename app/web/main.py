@@ -18,7 +18,14 @@ WEB_DEFAULT_DATABASE_URL = "sqlite:///data/web/superfa-web.db"
 def web_settings_from_env() -> Settings:
     settings = Settings.from_env()
     web_database_url = os.getenv("WEB_DATABASE_URL", WEB_DEFAULT_DATABASE_URL)
-    return replace(settings, database_url=web_database_url)
+    web_article_output_dir = os.getenv("WEB_OUTPUT_DIR", "data/web/outputs/articles")
+    web_image_output_dir = os.getenv("WEB_IMAGE_OUTPUT_DIR", "data/web/outputs/images")
+    return replace(
+        settings,
+        database_url=web_database_url,
+        article_output_dir=web_article_output_dir,
+        image_output_dir=web_image_output_dir,
+    )
 
 
 def create_app() -> FastAPI:

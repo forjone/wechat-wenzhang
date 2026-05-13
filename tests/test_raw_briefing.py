@@ -55,7 +55,7 @@ def test_generate_daily_uses_ten_briefing_items_and_interprets_top_item(tmp_path
         return [dict(item) for item in news]
 
     monkeypatch.setattr("app.main.prepare_news", fake_prepare_news)
-    monkeypatch.setattr("app.main.save_article_outputs", lambda article: {"markdown": tmp_path / f"{article['content_type']}.md", "html": tmp_path / f"{article['content_type']}.html", "metadata": tmp_path / f"{article['content_type']}.json"})
+    monkeypatch.setattr("app.main.save_article_outputs", lambda article, output_dir=None: {"markdown": tmp_path / f"{article['content_type']}.md", "html": tmp_path / f"{article['content_type']}.html", "metadata": tmp_path / f"{article['content_type']}.json"})
 
     db_path = tmp_path / "superfa.db"
     settings = Settings(database_url=f"sqlite:///{db_path}")

@@ -4,6 +4,8 @@ __pycache__/
 .pytest_cache/
 data/*.db
 data/**/*.db
+data/web/outputs/*
+data/web/outputs/**/*
 data/token_store.json
 data/token_store_*.json
 outputs/articles/*

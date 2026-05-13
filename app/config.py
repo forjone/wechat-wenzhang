@@ -33,6 +33,8 @@ class Settings:
     author_name: str = "超级发"
     auto_publish: bool = False
     database_url: str = "sqlite:///data/superfa.db"
+    article_output_dir: str = "outputs/articles"
+    image_output_dir: str = "outputs/images"
     aihot_skill_url: str = "https://aihot.virxact.com"
     aihot_skill_timeout: int = 30
     aihot_skill_max_items: int = 20
@@ -52,6 +54,8 @@ class Settings:
             author_name=os.getenv("AUTHOR_NAME", "超级发"),
             auto_publish=os.getenv("AUTO_PUBLISH", "false").lower() == "true",
             database_url=os.getenv("DATABASE_URL", "sqlite:///data/superfa.db"),
+            article_output_dir=os.getenv("ARTICLE_OUTPUT_DIR", "outputs/articles"),
+            image_output_dir=os.getenv("IMAGE_OUTPUT_DIR", "outputs/images"),
             aihot_skill_url=os.getenv("AIHOT_SKILL_URL", "https://aihot.virxact.com"),
             aihot_skill_timeout=int(os.getenv("AIHOT_SKILL_TIMEOUT", "30")),
             aihot_skill_max_items=int(os.getenv("AIHOT_SKILL_MAX_ITEMS", "20")),

@@ -56,7 +56,7 @@ def test_daily_keeps_cjfai_briefing_and_numbered_interpretation_plus_mflai_extra
 
     monkeypatch.setattr("app.main.prepare_news", fake_prepare_news)
     monkeypatch.setattr("app.main.enrich_interpretation_item", fake_enrich)
-    monkeypatch.setattr("app.main.save_article_outputs", lambda article: {"markdown": tmp_path / f"{article['title']}.md", "html": tmp_path / f"{article['title']}.html", "metadata": tmp_path / f"{article['title']}.json"})
+    monkeypatch.setattr("app.main.save_article_outputs", lambda article, output_dir=None: {"markdown": tmp_path / f"{article['title']}.md", "html": tmp_path / f"{article['title']}.html", "metadata": tmp_path / f"{article['title']}.json"})
     monkeypatch.setattr("app.main.create_draft_if_requested", fake_create_draft)
 
     settings = Settings(database_url=f"sqlite:///{tmp_path / 'superfa.db'}")

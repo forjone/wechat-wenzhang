@@ -154,8 +154,8 @@ def publish_draft_if_confirmed(settings: Settings, draft_id: str | None, publish
     return PublishManager(access_token, auto_publish=True).publish_draft(draft_id)
 
 
-def attach_article_images(article: dict[str, Any]) -> dict[str, Any]:
-    image_assets = generate_article_images(article)
+def attach_article_images(article: dict[str, Any], output_dir: str | None = None) -> dict[str, Any]:
+    image_assets = generate_article_images(article, output_dir=output_dir or "outputs/images")
     article.update(image_assets)
     return article
 
@@ -167,7 +167,7 @@ def persist_article(
     wechat_account: str = "default",
     publish_confirm: bool = False,
 ) -> dict[str, Any]:
-    output_paths = save_article_outputs(article)
+    output_paths = save_article_outputs(article, output_dir=settings.article_output_dir)
     article_id = save_article(settings.database_path, article)
     draft_id = create_draft_if_requested(settings, article, create_draft, wechat_account, retry_delay_seconds=0 if settings.wechat_proxy_url else 2.0)
     publish_id = publish_draft_if_confirmed(settings, draft_id, publish_confirm, wechat_account)
