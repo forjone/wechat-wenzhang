@@ -29,14 +29,14 @@ def _today() -> str:
     return date_cls.today().isoformat()
 
 
-def collect_news(settings: Settings, target_date: str) -> list[dict[str, Any]]:
+def collect_news(settings: Settings, target_date: str, max_items: int | None = None) -> list[dict[str, Any]]:
     client = AIHotSkillClient(
         base_url=settings.aihot_skill_url,
         timeout=settings.aihot_skill_timeout,
         api_key=settings.aihot_skill_api_key,
         user_agent=settings.aihot_user_agent,
     )
-    return client.fetch_daily_news(target_date, settings.aihot_skill_max_items)
+    return client.fetch_daily_news(target_date, max_items or settings.aihot_skill_max_items)
 
 
 def _published_date(item: dict[str, Any]) -> str:
@@ -71,7 +71,8 @@ def prepare_news(settings: Settings, target_date: str, allow_fallback: bool | No
     source_mode = "aihot_skill"
     source_error = ""
     try:
-        news = collect_news(settings, target_date)
+        fetch_limit = max(settings.aihot_skill_max_items, 100)
+        news = collect_news(settings, target_date, max_items=fetch_limit)
     except Exception as exc:
         source_error = str(exc) or exc.__class__.__name__
         if not fallback_allowed:

@@ -130,9 +130,47 @@ def test_prepare_news_keeps_only_items_published_on_target_date(monkeypatch):
             "tags": ["AI工具"],
         },
     ]
-    monkeypatch.setattr("app.main.collect_news", lambda settings, target_date: [dict(item) for item in raw_news])
+    monkeypatch.setattr("app.main.collect_news", lambda settings, target_date, max_items=None: [dict(item) for item in raw_news])
 
     news = prepare_news(Settings(aihot_skill_max_items=20), "2026-05-12")
 
     assert [item["title"] for item in news] == ["当天零点新闻", "当天晚上新闻"]
     assert all(item["date"] == "2026-05-12" for item in news)
+
+
+def test_prepare_news_fetches_enough_items_before_filtering_target_date(monkeypatch):
+    calls: list[int] = []
+
+    def fake_collect_news(settings, target_date, max_items=None):
+        calls.append(max_items or settings.aihot_skill_max_items)
+        return [
+            {
+                "title": f"次日新闻 {i}",
+                "url": f"https://example.com/next-{i}",
+                "source": "AIHot",
+                "published_at": "2026-05-13T00:00:00Z",
+                "summary": "次日新闻摘要",
+                "category": "产品发布/更新",
+                "tags": ["AI工具"],
+            }
+            for i in range(15)
+        ] + [
+            {
+                "title": f"目标日新闻 {i}",
+                "url": f"https://example.com/target-{i}",
+                "source": "AIHot",
+                "published_at": "2026-05-12T12:00:00Z",
+                "summary": "目标日新闻摘要",
+                "category": "产品发布/更新",
+                "tags": ["AI工具"],
+            }
+            for i in range(36)
+        ]
+
+    monkeypatch.setattr("app.main.collect_news", fake_collect_news)
+
+    news = prepare_news(Settings(aihot_skill_max_items=20), "2026-05-12")
+
+    assert calls == [100]
+    assert len(news) == 20
+    assert [item["title"] for item in news] == [f"目标日新闻 {i}" for i in range(20)]
