@@ -4,7 +4,7 @@ import argparse
 import json
 import sys
 import time
-from datetime import date as date_cls
+from datetime import date as date_cls, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +39,25 @@ def collect_news(settings: Settings, target_date: str) -> list[dict[str, Any]]:
     return client.fetch_daily_news(target_date, settings.aihot_skill_max_items)
 
 
+def _published_date(item: dict[str, Any]) -> str:
+    value = str(item.get("published_at") or item.get("date") or "").strip()
+    if not value:
+        return ""
+    if len(value) >= 10 and value[4:5] == "-" and value[7:8] == "-":
+        return value[:10]
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc)
+    return parsed.date().isoformat()
+
+
+def filter_news_for_target_date(news: list[dict[str, Any]], target_date: str) -> list[dict[str, Any]]:
+    return [item for item in news if _published_date(item) == target_date]
+
+
 def fallback_news(target_date: str) -> list[dict[str, Any]]:
     return [
         {"title": "AI搜索和智能助手继续改变信息入口", "url": "", "source": "fallback", "published_at": target_date, "summary": "AI搜索、智能助手和内容生成工具正在进入更多普通人的工作流程。", "content": "AI搜索、智能助手和内容生成工具正在进入更多普通人的工作流程。", "category": "AI搜索", "tags": ["AI搜索", "Agent", "效率"], "raw": {}},
@@ -59,7 +78,7 @@ def prepare_news(settings: Settings, target_date: str, allow_fallback: bool | No
             raise RuntimeError(source_error) from exc
         source_mode = "fallback"
         news = fallback_news(target_date)
-    news = dedupe_news(news)[: settings.aihot_skill_max_items]
+    news = filter_news_for_target_date(dedupe_news(news), target_date)[: settings.aihot_skill_max_items]
     for item in news:
         item["date"] = target_date
         item["score"] = score_for_briefing(item)

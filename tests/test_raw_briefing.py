@@ -89,3 +89,50 @@ def test_prepare_news_respects_max_items_from_settings():
     news = prepare_news(settings, "2026-05-09")
 
     assert len(news) <= 7
+
+
+def test_prepare_news_keeps_only_items_published_on_target_date(monkeypatch):
+    raw_news = [
+        {
+            "title": "当天零点新闻",
+            "url": "https://example.com/same-start",
+            "source": "AIHot",
+            "published_at": "2026-05-12T00:00:00Z",
+            "summary": "当天新闻摘要",
+            "category": "产品发布/更新",
+            "tags": ["AI工具"],
+        },
+        {
+            "title": "当天晚上新闻",
+            "url": "https://example.com/same-night",
+            "source": "AIHot",
+            "published_at": "2026-05-12T23:59:59Z",
+            "summary": "当天新闻摘要",
+            "category": "产品发布/更新",
+            "tags": ["AI工具"],
+        },
+        {
+            "title": "次日新闻不应保留",
+            "url": "https://example.com/next-day",
+            "source": "AIHot",
+            "published_at": "2026-05-13T00:00:00Z",
+            "summary": "次日新闻摘要",
+            "category": "产品发布/更新",
+            "tags": ["AI工具"],
+        },
+        {
+            "title": "前一日新闻不应保留",
+            "url": "https://example.com/previous-day",
+            "source": "AIHot",
+            "published_at": "2026-05-11T23:59:59Z",
+            "summary": "前一日新闻摘要",
+            "category": "产品发布/更新",
+            "tags": ["AI工具"],
+        },
+    ]
+    monkeypatch.setattr("app.main.collect_news", lambda settings, target_date: [dict(item) for item in raw_news])
+
+    news = prepare_news(Settings(aihot_skill_max_items=20), "2026-05-12")
+
+    assert [item["title"] for item in news] == ["当天零点新闻", "当天晚上新闻"]
+    assert all(item["date"] == "2026-05-12" for item in news)
