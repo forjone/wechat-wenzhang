@@ -76,7 +76,7 @@ def test_news_page_collects_and_lists_sources(tmp_path, monkeypatch):
     assert "生成文章" in page.text
 
 
-def test_news_page_shows_original_published_time_from_source_payload(tmp_path, monkeypatch):
+def test_news_page_shows_short_original_published_time_from_source_payload(tmp_path, monkeypatch):
     client, db_path = make_client(tmp_path, monkeypatch)
     init_db(db_path)
     save_source(
@@ -96,7 +96,8 @@ def test_news_page_shows_original_published_time_from_source_payload(tmp_path, m
 
     assert response.status_code == 200
     assert "发布时间" in response.text
-    assert "2026-05-09T00:30:00Z" in response.text
+    assert "05-09 00:30" in response.text
+    assert "2026-05-09T00:30:00Z" not in response.text
 
 
 def test_generate_source_article_stores_article_with_selected_style_and_account(tmp_path, monkeypatch):

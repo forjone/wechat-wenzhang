@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -27,6 +28,18 @@ def ensure_web_db(db_path: str | Path) -> None:
     init_db(db_path)
 
 
+def _format_published_time(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    normalized = text.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return text[:16] if len(text) > 16 else text
+    return parsed.strftime("%m-%d %H:%M")
+
+
 def source_published_time(source: dict[str, Any]) -> str:
     raw = source.get("raw_json") or ""
     if isinstance(raw, str) and raw.strip():
@@ -41,8 +54,8 @@ def source_published_time(source: dict[str, Any]) -> str:
     for key in ("publishedAt", "published_at", "date", "time"):
         value = payload.get(key)
         if value:
-            return str(value)
-    return str(source.get("published_at") or source.get("date") or "")
+            return _format_published_time(value)
+    return _format_published_time(source.get("published_at") or source.get("date") or "")
 
 
 def list_sources(db_path: str | Path, date: str | None = None) -> list[dict[str, Any]]:

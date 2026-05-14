@@ -173,6 +173,26 @@ def test_briefing_image_prompt_uses_bytedance_green_style():
     assert "公众号主图" in prompt
 
 
+def test_generate_interpretation_tail_sections_are_specific_to_source_topic():
+    news = [{
+        "title": "Suno登陆车载系统，车内流媒体新体验",
+        "url": "https://x",
+        "summary": "Suno 现在可在 Apple CarPlay 和 Android Auto 上使用，用户可以在车里流媒体播放自己创作的音乐。",
+        "tags": ["AI音乐", "车载系统"],
+    }]
+    article = generate_interpretation(news, date="2026-05-13", issue_no=8)
+    markdown = article["content_markdown"]
+
+    assert "内容创作者\n可以更快完成选题、资料整理、脚本和图文生产。" not in markdown
+    assert "个体创业者和小老板\n可以用更低成本搭建获客、客服、内容和自动化流程。" not in markdown
+    assert "围绕这个变化做解释型内容、教程、案例拆解" not in markdown
+    assert "先找到一个自己每天重复做的工作环节" not in markdown
+    assert "音乐" in markdown
+    assert "车载" in markdown
+    assert "Suno" in markdown
+    assert any("音乐" in person["impact"] or "车载" in person["impact"] for person in article["affected_people"])
+
+
 def test_generate_interpretation_outputs_required_sections():
     news = [{"title": "AI搜索升级", "url": "https://x", "summary": "AI搜索改变信息入口", "tags": ["AI搜索"]}]
     article = generate_interpretation(news, date="2026-05-09", issue_no=1)
