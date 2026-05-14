@@ -103,9 +103,29 @@ def test_generate_interpretation_marks_key_words_for_visual_emphasis():
     assert "AI搜索改变信息入口\n这件事表面上看是：" in article["content_markdown"]
     assert "**真正值得关注的是**" in article["content_markdown"]
     assert "> [!important] 超级发一句话" in article["content_markdown"]
-    assert "**普通人不用关心参数多了多少**" in article["content_markdown"]
-    assert "AI搜索改变信息入口\n**普通人不用关心参数多了多少**" in article["content_markdown"]
-    assert "**AI 工具正在更直接地进入**" in article["content_markdown"]
+    assert "AI搜索改变信息入口\n**真正要问的是**" in article["content_markdown"]
+    assert "AI搜索升级" in article["content_markdown"]
+
+
+def test_generate_interpretation_avoids_fixed_generic_framing_sentences():
+    news = [{
+        "title": "Suno登陆车载系统，车内流媒体新体验",
+        "url": "https://x",
+        "summary": "Suno 现在可在 Apple CarPlay 和 Android Auto 上使用，用户可以在车里流媒体播放自己创作的音乐。",
+        "tags": ["AI音乐", "车载系统"],
+    }]
+    article = generate_interpretation(news, date="2026-05-13", issue_no=8)
+    markdown = article["content_markdown"]
+
+    assert "AI 正在从少数人的技术能力，变成普通人可以直接使用的生产力工具" not in markdown
+    assert "普通人不用关心参数多了多少" not in markdown
+    assert "AI 工具正在更直接地进入 内容生产、信息获取、办公协作和小生意流程" not in markdown
+    assert "如果原文里已经出现产品能力、使用门槛、目标用户或商业化路径" not in markdown
+    assert "**AI 工具正在更直接地进入**" not in markdown
+    assert "随手生成、随处收听" in markdown
+    assert "车载系统" in markdown
+    assert "车内" in markdown
+    assert article["real_signal"].startswith("AI 音乐")
 
 
 def test_generate_interpretation_keeps_original_fetch_details_out_of_visible_body():
