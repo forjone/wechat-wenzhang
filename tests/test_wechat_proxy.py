@@ -216,6 +216,47 @@ def test_create_draft_retries_transient_proxy_failures(monkeypatch):
     assert calls == ["mflai", "mflai", "mflai"]
 
 
+def test_create_draft_falls_back_to_legacy_proxy_when_generated_thumb_proxy_returns_502(monkeypatch):
+    settings = Settings(wechat_proxy_url="https://tokyo.example.com", wechat_proxy_api_key="secret")
+    calls = []
+
+    class FakeProxy:
+        def __init__(self, base_url, api_key="", timeout=30):
+            pass
+
+        def create_draft_with_generated_thumb(self, article, account="default", image_size="2048x1152", image_style="text"):
+            calls.append(("generated", account, image_size, image_style))
+            raise RuntimeError("HTTP Error 502: Bad Gateway")
+
+        def create_draft(self, article, account="default"):
+            calls.append(("legacy", account, article.get("thumb_media_id", ""), "image_prompt" in article))
+            return "legacy_draft_after_502"
+
+    monkeypatch.setattr("app.main.WeChatProxyClient", FakeProxy)
+    monkeypatch.setattr("app.main.time.sleep", lambda seconds: None)
+
+    draft_id = create_draft_if_requested(
+        settings,
+        {
+            "title": "标题",
+            "digest": "摘要",
+            "content_html": "<p>正文</p>",
+            "image_prompt": "绿色科技插画",
+            "thumb_media_id": "legacy_thumb",
+        },
+        True,
+        "cjfai",
+    )
+
+    assert draft_id == "legacy_draft_after_502"
+    assert calls[:3] == [
+        ("generated", "cjfai", "2048x1152", "text"),
+        ("generated", "cjfai", "2048x1152", "text"),
+        ("generated", "cjfai", "2048x1152", "text"),
+    ]
+    assert calls[3] == ("legacy", "cjfai", "legacy_thumb", False)
+
+
 def test_publish_uses_proxy_after_auto_publish_guard(monkeypatch):
     settings = Settings(wechat_proxy_url="https://tokyo.example.com", auto_publish=True)
     calls = []

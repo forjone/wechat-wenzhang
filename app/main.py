@@ -114,6 +114,11 @@ def _get_wechat_proxy(settings: Settings) -> WeChatProxyClient | None:
     )
 
 
+def _is_generated_thumb_proxy_failure(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return any(token in message for token in ("502", "503", "504", "bad gateway", "gateway time-out", "gateway timeout"))
+
+
 def create_draft_if_requested(
     settings: Settings,
     article: dict[str, Any],
@@ -136,26 +141,35 @@ def create_draft_if_requested(
         "only_fans_can_comment": 0,
     }
 
-    def create_once() -> str:
+    def create_once(*, generated_thumb: bool = True) -> str:
         if proxy:
-            if article.get("image_prompt"):
-                return proxy.create_draft_with_generated_thumb(draft_article, account=wechat_account, image_size="2048x1152", image_style="text")
-            draft_article["thumb_media_id"] = article.get("thumb_media_id", "")
-            return proxy.create_draft(draft_article, account=wechat_account)
-        draft_article["thumb_media_id"] = article.get("thumb_media_id", "")
+            if generated_thumb and article.get("image_prompt"):
+                return proxy.create_draft_with_generated_thumb(
+                    draft_article,
+                    account=wechat_account,
+                    image_size="2048x1152",
+                    image_style="text",
+                )
+            legacy_article = dict(draft_article)
+            legacy_article["thumb_media_id"] = article.get("thumb_media_id", "")
+            return proxy.create_draft(legacy_article, account=wechat_account)
+        legacy_article = dict(draft_article)
+        legacy_article["thumb_media_id"] = article.get("thumb_media_id", "")
         access_token = _get_wechat_access_token(settings, wechat_account)
-        return DraftManager(access_token).create_draft(draft_article)
+        return DraftManager(access_token).create_draft(legacy_article)
 
     attempts = max(1, max_attempts)
     last_exc: Exception | None = None
     for attempt in range(1, attempts + 1):
         try:
-            return create_once()
+            return create_once(generated_thumb=True)
         except Exception as exc:
             last_exc = exc
             if attempt >= attempts:
                 break
             time.sleep(retry_delay_seconds * attempt)
+    if proxy and article.get("image_prompt") and article.get("thumb_media_id") and last_exc and _is_generated_thumb_proxy_failure(last_exc):
+        return create_once(generated_thumb=False)
     assert last_exc is not None
     raise last_exc
 
