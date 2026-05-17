@@ -222,6 +222,58 @@ def test_generate_interpretation_outputs_required_sections():
     assert "超级发一句话" in article["content_markdown"]
 
 
+def test_generate_interpretation_tail_sections_change_for_different_unprofiled_news():
+    first = generate_interpretation([{
+        "title": "Notion推出开发者平台及CLI工具",
+        "summary": "Notion正式推出开发者平台，包含Notion CLI、Workers计算服务、数据库同步功能以及Agent工具与API。",
+        "tags": ["开发者工具", "Notion"],
+    }], date="2026-05-17", issue_no=21)
+    second = generate_interpretation([{
+        "title": "工具使用代理认知与行动脱节机制研究",
+        "summary": "可解释性论文发现工具使用代理常能识别应调用工具，但实际调用失败，不匹配率达26%-54%。",
+        "tags": ["AI研究", "智能体"],
+    }], date="2026-05-17", issue_no=22)
+
+    assert first["real_signal"] != second["real_signal"]
+    assert first["affected_people"] != second["affected_people"]
+    assert first["actions"] != second["actions"]
+    assert "这个领域的一线使用者" not in first["content_markdown"]
+    assert "这个领域的一线使用者" not in second["content_markdown"]
+    assert "解释机会\n把这条新闻讲成具体场景、具体人群、具体用法" not in first["content_markdown"]
+    assert "解释机会\n把这条新闻讲成具体场景、具体人群、具体用法" not in second["content_markdown"]
+    assert "Notion" in first["content_markdown"]
+    assert "工具使用代理" in second["content_markdown"]
+
+
+def test_agent_keyword_alone_does_not_force_search_infrastructure_profile():
+    article = generate_interpretation([{
+        "title": "Notion推出开发者平台及CLI工具",
+        "summary": "Notion 平台提供Agent工具和API，让开发者在Notion基础设施上运行代码。",
+        "tags": ["开发者平台"],
+    }], date="2026-05-17", issue_no=23)
+
+    markdown = article["content_markdown"]
+    assert "PostgreSQL" not in markdown
+    assert "BM25" not in markdown
+    assert "混合检索" not in markdown
+    assert "Notion" in markdown
+
+
+def test_openrouter_agent_workflow_does_not_use_shortcut_workflow_profile():
+    article = generate_interpretation([{
+        "title": "Ring-2.6-1T开源并上线OpenRouter，专为智能体工作流设计",
+        "summary": "模型通过 OpenRouter 上线，面向 Agent 工作流、模型路由和多步骤推理场景。",
+        "tags": ["开源模型", "OpenRouter", "智能体"],
+    }], date="2026-05-17", issue_no=24)
+
+    markdown = article["content_markdown"]
+    assert "OpenRouter" in markdown
+    assert "模型路由" in markdown or "路由" in markdown
+    assert "快捷键" not in markdown
+    assert "工作流模板机会" not in markdown
+    assert "AI 编程工具从“能用”调到“顺手高频用”" not in markdown
+
+
 def test_markdown_to_wechat_html_is_mobile_friendly():
     html = markdown_to_wechat_html("# 标题\n\n你好\n\n## 一、新闻\n\n**发生了什么：**\n\n内容")
     assert html.startswith('<section data-theme="fresh-card"')

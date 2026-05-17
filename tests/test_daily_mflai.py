@@ -73,6 +73,7 @@ def test_daily_keeps_cjfai_briefing_and_numbered_interpretation_plus_mflai_extra
     assert result["mflai_interpretation"]["draft_account"] == "mflai"
     assert result["mflai_interpretation"]["title"].startswith("第二主题 AI教育产品爆发")
     assert not result["mflai_interpretation"]["title"].startswith("AI解读")
+    assert result["mflai_interpretation"]["metadata"]["issue_no"] == 1
     assert result["mflai_interpretation"]["metadata"]["source_news"][0]["title"] == "第二主题 AI教育产品爆发"
     assert result["mflai_interpretation"]["metadata"]["source_news"][0]["original_fetch_status"] == "success"
     assert "业务背景、产品细节和影响分析" in created_articles[2]["content_markdown"]

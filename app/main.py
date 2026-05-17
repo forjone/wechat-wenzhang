@@ -296,7 +296,7 @@ def generate_daily_command(settings: Settings, target_date: str, create_draft: b
     result = {"status": "success", "date": display_date, "source_date": target_date, "briefing": briefing_result, "interpretation": interpretation_result}
     if wechat_account == "cjfai":
         selected_mflai = enrich_interpretation_selection(select_interpretation_item(selected_briefing, avoid_first=True), settings)
-        mflai_issue = next_issue_no(settings.database_path, "interpretation")
+        mflai_issue = next_issue_no(settings.database_path, "mflai_interpretation")
         mflai_interpretation = generate_interpretation(
             selected_mflai,
             display_date,
