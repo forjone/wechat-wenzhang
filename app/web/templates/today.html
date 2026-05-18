@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>今日工作台</h2>
+  <form method="get" action="/today">
+    <label>新闻日期 <input type="date" name="date" value="{{ date }}" required></label>
+    <button type="submit">切换日期</button>
+  </form>
+  <p class="muted">按北京时间默认选择昨天新闻，避免服务器 UTC 导致取错日期。</p>
+  <div class="grid">
+    <div class="card"><strong>下一个编号</strong><br>AI简报 {{ next_issues.next_briefing_issue_no }} ｜ AI解读 {{ next_issues.next_interpretation_issue_no }}</div>
+    <div class="card"><strong>候选新闻</strong><br>{{ sources|length }} 条</div>
+  </div>
+</section>
+<section class="card">
+  <h3>选择新闻并一键生成草稿</h3>
+  <form method="post" action="/today/generate" class="js-loading-form">
+    <input type="hidden" name="date" value="{{ date }}">
+    <label><input type="checkbox" name="create_draft" value="on"> 同时创建公众号草稿</label>
+    <table>
+      <tr><th>标题</th><th>AI简报</th><th>AI解读</th><th>mflai拆解</th><th>状态</th><th>分数</th></tr>
+      {% for source in sources %}
+      <tr>
+        <td><a href="{{ source.url }}" target="_blank">{{ source.title }}</a><br><span class="muted">{{ source.summary }}</span></td>
+        <td><input type="radio" name="briefing_source_id" value="{{ source.id }}"></td>
+        <td><input type="radio" name="interpretation_source_id" value="{{ source.id }}"></td>
+        <td><input type="radio" name="mflai_source_id" value="{{ source.id }}"></td>
+        <td>{{ source.used_status or '未使用' }} {{ source.duplicate_hint }}</td>
+        <td>{{ source.score }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <button type="submit" data-loading-text="生成中..."><span class="spinner" aria-hidden="true"></span><span class="button-label">一键生成草稿</span></button>
+    <span class="loading-message" role="status" aria-live="polite">正在生成，请稍候</span>
+  </form>
+</section>
+{% endblock %}

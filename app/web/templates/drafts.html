@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>草稿状态面板</h2>
+  <p class="muted">用于追踪本地已创建草稿、已发布、作废和待审核文章。真实 draft id 不在页面中完整展示。</p>
+</section>
+<section class="card">
+  <table>
+    <tr><th>标题</th><th>类型</th><th>编号</th><th>状态</th><th>草稿</th><th>操作</th></tr>
+    {% for article in articles %}
+    <tr>
+      <td><a href="/articles/{{ article.id }}">{{ article.title }}</a></td>
+      <td>{{ article.content_type }}</td>
+      <td>{{ article.issue_no }}</td>
+      <td>{{ article.status }}</td>
+      <td>{% if article.draft_id %}[REDACTED]{% else %}-{% endif %}</td>
+      <td>
+        <form method="post" action="/articles/{{ article.id }}/status" class="inline-form">
+          <select name="status">
+            <option value="published">标记已发布</option>
+            <option value="voided">标记作废</option>
+            <option value="needs_review">待审核</option>
+            <option value="generated">仅生成</option>
+          </select>
+          <button type="submit">更新</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+{% endblock %}

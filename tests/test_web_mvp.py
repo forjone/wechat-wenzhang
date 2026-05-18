@@ -224,3 +224,104 @@ def test_list_pages_render_bulk_delete_controls(tmp_path, monkeypatch):
     assert "批量删除" in news_page.text
     assert 'action="/articles/bulk-delete"' in articles_page.text
     assert 'name="ids"' in articles_page.text
+
+
+def test_today_workbench_renders_selection_flow(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    source_id = save_source(db_path, {"date": "2026-05-17", "title": "今日候选", "url": "https://example.com/today", "source": "AIHot", "summary": "摘要", "score": 90})
+
+    response = client.get("/today?date=2026-05-17")
+
+    assert response.status_code == 200
+    assert "今日工作台" in response.text
+    assert "一键生成草稿" in response.text
+    assert f'name="briefing_source_id" value="{source_id}"' in response.text
+    assert "下一个编号" in response.text
+
+
+def test_news_page_marks_sources_already_used_by_articles(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    save_source(db_path, {"date": "2026-05-17", "title": "已用新闻", "url": "https://example.com/used", "source": "AIHot", "summary": "摘要"})
+    save_article(db_path, {"content_type": "interpretation", "issue_no": 1, "date": "2026-05-18", "title": "解读", "digest": "摘要", "source_url": "https://example.com/used", "content_markdown": "# 文", "content_html": "<h1>文</h1>", "status": "draft_created", "draft_id": "local_draft"})
+
+    response = client.get("/news?date=2026-05-17")
+
+    assert response.status_code == 200
+    assert "已生成解读" in response.text
+    assert "draft_created" in response.text
+
+
+def test_article_can_be_edited_and_rerendered_before_draft(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    article_id = save_article(db_path, {"content_type": "interpretation", "issue_no": 1, "date": "2026-05-18", "title": "旧标题", "digest": "旧摘要", "content_markdown": "# 旧", "content_html": "<h1>旧</h1>", "status": "generated"})
+
+    response = client.post(f"/articles/{article_id}/edit", data={"title": "新标题", "digest": "新摘要", "content_markdown": "# 新内容"}, follow_redirects=False)
+
+    assert response.status_code == 303
+    page = client.get(f"/articles/{article_id}")
+    assert "新标题" in page.text
+    assert "# 新内容" in page.text
+    assert "旧标题" not in page.text
+
+
+def test_drafts_panel_and_article_status_actions(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    article_id = save_article(db_path, {"content_type": "briefing", "issue_no": 1, "date": "2026-05-18", "title": "草稿文章", "digest": "摘要", "content_markdown": "# 文", "content_html": "<h1>文</h1>", "status": "draft_created", "draft_id": "local_draft"})
+
+    page = client.get("/drafts")
+    assert page.status_code == 200
+    assert "草稿状态面板" in page.text
+    assert "草稿文章" in page.text
+
+    response = client.post(f"/articles/{article_id}/status", data={"status": "voided"}, follow_redirects=False)
+    assert response.status_code == 303
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("select status from articles where id=?", (article_id,)).fetchone()[0] == "voided"
+
+
+def test_existing_article_can_create_draft_without_new_issue(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    article_id = save_article(db_path, {"content_type": "interpretation", "issue_no": 8, "date": "2026-05-18", "title": "补发文章", "digest": "摘要", "content_markdown": "# 文", "content_html": "<h1>文</h1>", "status": "generated"})
+
+    monkeypatch.setattr("app.web.services.create_draft_if_requested", lambda settings, article, create_draft, wechat_account="default", **kwargs: "local_draft_retry")
+    response = client.post(f"/articles/{article_id}/create-draft", data={"wechat_account": "cjfai"}, follow_redirects=False)
+
+    assert response.status_code == 303
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute("select issue_no, status, draft_id from articles where id=?", (article_id,)).fetchone()
+        assert row == (8, "draft_created", "local_draft_retry")
+        assert conn.execute("select count(*) from articles").fetchone()[0] == 1
+
+
+def test_health_page_reports_timezone_cron_and_next_issues(tmp_path, monkeypatch):
+    client, _ = make_client(tmp_path, monkeypatch)
+
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert "系统健康检查" in response.text
+    assert "北京时间" in response.text
+    assert "下次编号" in response.text
+    assert "定时任务" in response.text
+
+
+def test_article_tools_show_angles_themes_and_cover_controls(tmp_path, monkeypatch):
+    client, db_path = make_client(tmp_path, monkeypatch)
+    init_db(db_path)
+    article_id = save_article(db_path, {"content_type": "interpretation", "issue_no": 1, "date": "2026-05-18", "title": "工具文章", "digest": "摘要", "source_title": "Codex 视频", "source_url": "https://example.com/codex", "content_markdown": "# 文", "content_html": "<h1>文</h1>", "cover_prompt": "old prompt", "status": "generated"})
+
+    response = client.get(f"/articles/{article_id}")
+    assert response.status_code == 200
+    assert "多角度选题" in response.text
+    assert "排版主题预览" in response.text
+    assert "封面图工作流" in response.text
+
+    update = client.post(f"/articles/{article_id}/cover", data={"cover_prompt": "new prompt"}, follow_redirects=False)
+    assert update.status_code == 303
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("select cover_prompt from articles where id=?", (article_id,)).fetchone()[0] == "new prompt"

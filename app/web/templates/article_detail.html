@@ -2,7 +2,51 @@
 {% block content %}
 <section class="card">
   <h2>{{ article.title }}</h2>
-  <p class="muted">类型：{{ article.content_type }} ｜ 日期：{{ article.date }} ｜ 状态：{{ article.status }} ｜ 草稿：{{ article.draft_id or '-' }}</p>
+  <p class="muted">类型：{{ article.content_type }} ｜ 日期：{{ article.date }} ｜ 状态：{{ article.status }} ｜ 草稿：{% if article.draft_id %}[REDACTED]{% else %}-{% endif %}</p>
+</section>
+<section class="card">
+  <h3>生成前预览 / 编辑</h3>
+  <form method="post" action="/articles/{{ article.id }}/edit">
+    <label>标题<input type="text" name="title" value="{{ article.title }}" required></label>
+    <label>摘要<textarea name="digest" rows="3">{{ article.digest or '' }}</textarea></label>
+    <label>主题
+      <select name="theme">
+        {% for theme in themes %}<option value="{{ theme }}">{{ theme }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Markdown<textarea name="content_markdown" rows="18" required>{{ article.content_markdown }}</textarea></label>
+    <button type="submit">保存修改并重渲染</button>
+  </form>
+</section>
+<section class="card">
+  <h3>补发 / 状态</h3>
+  <form method="post" action="/articles/{{ article.id }}/create-draft" class="inline-form">
+    <select name="wechat_account"><option value="cjfai">cjfai</option><option value="mflai">mflai</option></select>
+    <button type="submit">重新创建公众号草稿</button>
+  </form>
+  <form method="post" action="/articles/{{ article.id }}/status" class="inline-form">
+    <select name="status"><option value="published">标记已发布</option><option value="voided">标记作废</option><option value="needs_review">待审核</option><option value="generated">仅生成</option></select>
+    <button type="submit">更新状态</button>
+  </form>
+</section>
+<section class="card">
+  <h3>多角度选题</h3>
+  <ul>{% for angle in angles %}<li>{{ angle }}</li>{% endfor %}</ul>
+</section>
+<section class="card">
+  <h3>排版主题预览</h3>
+  <form method="post" action="/articles/{{ article.id }}/theme-preview">
+    <select name="theme">{% for theme in themes %}<option value="{{ theme }}">{{ theme }}</option>{% endfor %}</select>
+    <button type="submit">应用主题</button>
+  </form>
+</section>
+<section class="card">
+  <h3>封面图工作流</h3>
+  <form method="post" action="/articles/{{ article.id }}/cover">
+    <label>封面 Prompt<textarea name="cover_prompt" rows="5">{{ article.cover_prompt or '' }}</textarea></label>
+    <button type="submit">保存封面 Prompt</button>
+  </form>
+  {% if article.cover_path %}<p>当前封面：{{ article.cover_path }}</p>{% endif %}
 </section>
 <section class="card">
   <h3>Markdown</h3>
