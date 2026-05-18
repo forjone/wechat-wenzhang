@@ -1,10 +1,12 @@
 from pathlib import Path
 
 
-def test_daily_runner_uses_yesterday_source_date_and_cjfai_account():
+def test_daily_runner_uses_beijing_yesterday_source_date_and_cjfai_account():
     script = Path("scripts/run_daily.sh").read_text(encoding="utf-8")
 
-    assert "SOURCE_DATE=\"$(date -d yesterday +%F)\"" in script
+    assert "BUSINESS_TZ=\"${BUSINESS_TZ:-Asia/Shanghai}\"" in script
+    assert "RUN_DATE=\"$(TZ=\"$BUSINESS_TZ\" date +%F)\"" in script
+    assert "SOURCE_DATE=\"$(TZ=\"$BUSINESS_TZ\" date -d yesterday +%F)\"" in script
     assert "WECHAT_ACCOUNT=\"${WECHAT_ACCOUNT:-cjfai}\"" in script
     assert "python3" in script
     assert "generate-daily" in script

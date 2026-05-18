@@ -12,3 +12,4 @@ outputs/articles/*
 outputs/covers/*
 outputs/images/*
 logs/*
+backups/
